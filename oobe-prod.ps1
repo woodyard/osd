@@ -13,8 +13,8 @@ $Global:oobeCloud = @{
     oobeSetDisplay = $true
     oobeSetRegionLanguage = $true
     oobeSetDateTime = $true
-    oobeRegisterAutopilot = $false
-    oobeRegisterAutopilotCommand = 'Get-WindowsAutopilotInfo -Online -GroupTag Demo -Assign'
+    oobeRegisterAutopilot = $true
+    oobeRegisterAutopilotCommand = 'Get-WindowsAutopilotInfo -Online'
     oobeRemoveAppxPackage = $true
     oobeRemoveAppxPackageName = 'CommunicationsApps','OfficeHub','People','Skype','Solitaire','Xbox','ZuneMusic','ZuneVideo','MicrosoftTeams'
     oobeAddCapability = $true
@@ -26,7 +26,7 @@ $Global:oobeCloud = @{
 }
 
 function Step-KeyboardLanguage {
-    # do nothing
+    #do nothing
 }
 function Step-oobeSetDisplay {
     [CmdletBinding()]
@@ -106,6 +106,30 @@ function Step-oobeTrustPSGallery {
         }
     }
 }
+function Step-oobeInstallModuleAutopilot {
+    [CmdletBinding()]
+    param ()
+    if ($env:UserName -eq 'defaultuser0') {
+        $Requirement = Import-Module WindowsAutopilotIntune -PassThru -ErrorAction Ignore
+        if (-not $Requirement)
+        {
+            Write-Host -ForegroundColor Cyan 'Install-Module WindowsAutopilotIntune'
+            Install-Module WindowsAutopilotIntune -Force
+        }
+    }
+}
+function Step-oobeInstallModuleAzureAd {
+    [CmdletBinding()]
+    param ()
+    if ($env:UserName -eq 'defaultuser0') {
+        $Requirement = Import-Module AzureAD -PassThru -ErrorAction Ignore
+        if (-not $Requirement)
+        {
+            Write-Host -ForegroundColor Cyan 'Install-Module AzureAD'
+            Install-Module AzureAD -Force
+        }
+    }
+}
 function Step-oobeInstallScriptAutopilot {
     [CmdletBinding()]
     param ()
@@ -136,36 +160,6 @@ function Step-oobeRegisterAutopilot {
         #Return $AutopilotProcess
         Write-Host -ForegroundColor Cyan 'Registering Device in Autopilot ' -NoNewline
         Get-WindowsAutopilotInfo -Online -GroupTag "PROD" -Assign
-    }
-}
-
-function Step-oobeInstallScriptAutopilot {
-    [CmdletBinding()]
-    param ()
-    if ($env:UserName -eq 'defaultuser0') {
-        $Requirement = Get-InstalledScript -Name Get-WindowsAutoPilotInfo -ErrorAction SilentlyContinue
-        if (-not $Requirement)
-        {
-            Write-Host -ForegroundColor Cyan 'Install-Script Get-WindowsAutoPilotInfo'
-            Install-Script -Name Get-WindowsAutoPilotInfo -Force
-        }
-    }
-}
-function Step-oobeRegisterAutopilot {
-    [CmdletBinding()]
-    param (
-        [System.String]
-        $Command
-    )
-    if (($env:UserName -eq 'defaultuser0') -and ($Global:oobeCloud.oobeRegisterAutopilot -eq $true)) {
-        Step-oobeInstallModuleAutopilot
-        Step-oobeInstallModuleAzureAd
-        Step-oobeInstallScriptAutopilot
-
-        Write-Host -ForegroundColor Cyan 'Registering Device in Autopilot in new PowerShell window ' -NoNewline
-        $AutopilotProcess = Start-Process PowerShell.exe -ArgumentList "-Command $Command" -PassThru
-        Write-Host -ForegroundColor Green "(Process Id $($AutopilotProcess.Id))"
-        Return $AutopilotProcess
     }
 }
 function Step-oobeRemoveAppxPackage {
@@ -307,19 +301,19 @@ function Step-oobeStopComputer {
 #endregion
 
 # Execute functions
+# Step-KeyboardLanguage
 Step-oobeExecutionPolicy
 Step-oobePackageManagement
 Step-oobeTrustPSGallery
 Step-oobeSetDisplay
 Step-oobeSetRegionLanguage
-# Step-KeyboardLanguage - doesn't work!
 Step-oobeSetDateTime
-# Step-oobeRegisterAutopilot
+Step-oobeRegisterAutopilot
 Step-oobeRemoveAppxPackage
 # Step-oobeAddCapability
 Step-oobeUpdateDrivers
 Step-oobeUpdateWindows
 # Invoke-Webhook
 Step-oobeRestartComputer
-Step-oobeStopComputer
+# Step-oobeStopComputer
 #=================================================
