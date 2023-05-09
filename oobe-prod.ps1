@@ -26,56 +26,7 @@ $Global:oobeCloud = @{
 }
 
 function Step-KeyboardLanguage {
-
-    Write-Host -ForegroundColor Green "Set keyboard language to da-DK"
-    Start-Sleep -Seconds 5
-    
-    <#
-    $LanguageList = Get-WinUserLanguageList
-    
-    $LanguageList.Add("da-DK")
-    Set-WinUserLanguageList $LanguageList -Force | Out-Null
-    
-    Start-Sleep -Seconds 5
-    
-    $LanguageList = Get-WinUserLanguageList
-    $LanguageList.Remove(($LanguageList | Where-Object LanguageTag -like 'en-US'))
-    $LanguageList.Remove(($LanguageList | Where-Object LanguageTag -like 'en-GB'))
-    Set-WinUserLanguageList $LanguageList -Force | Out-Null
-    #>
-    
-    # Get the current WinUserLanguageList
-    $UserLanguageList = Get-WinUserLanguageList
-
-    # Find the language entry for English (United Kingdom)
-    $LanguageEntry = $UserLanguageList | Where-Object { $_.LanguageTag -eq "en-GB" }
-
-    if ($LanguageEntry) {
-        # Add the Danish keyboard layout (da-DK) as an Input Method Tip to the English (United Kingdom) language entry
-        $DanishIMT = "0809:00000406"
-        $EnGbIMT = "0809:00000809"
-
-        if (-not ($LanguageEntry.InputMethodTips -contains $DanishIMT)) {
-            $LanguageEntry.InputMethodTips.Add($DanishIMT)
-        }
-
-        if ($LanguageEntry.InputMethodTips -contains $EnGbIMT) {
-            $LanguageEntry.InputMethodTips.Remove($EnGbIMT)
-        }
-
-        Set-WinUserLanguageList $UserLanguageList -Force
-        Write-Host "Danish keyboard layout has been added, and English (United Kingdom) keyboard layout has been removed."
-    } else {
-        Write-Host "English (United Kingdom) language entry not found."
-    }
-
-    $path = "Registry::HKEY_USERS\.DEFAULT\Keyboard Layout\Preload"
-    $name = "1"
-    $value = "00000406"
-
-    Set-ItemProperty -Path $path -Name $name -Value $value
-
-    Write-Host "The registry key has been updated with the Danish keyboard layout."
+    # do nothing
 }
 function Step-oobeSetDisplay {
     [CmdletBinding()]
@@ -155,30 +106,39 @@ function Step-oobeTrustPSGallery {
         }
     }
 }
-function Step-oobeInstallModuleAutopilot {
+function Step-oobeInstallScriptAutopilot {
     [CmdletBinding()]
     param ()
     if ($env:UserName -eq 'defaultuser0') {
-        $Requirement = Import-Module WindowsAutopilotIntune -PassThru -ErrorAction Ignore
+        $env:Path += ";C:\Program Files\WindowsPowerShell\Scripts"
+        $Requirement = Get-InstalledScript -Name Get-WindowsAutoPilotInfo -ErrorAction SilentlyContinue
         if (-not $Requirement)
         {
-            Write-Host -ForegroundColor Cyan 'Install-Module WindowsAutopilotIntune'
-            Install-Module WindowsAutopilotIntune -Force
+            Write-Host -ForegroundColor Cyan 'Install-Script Get-WindowsAutoPilotInfo'
+            Install-Script -Name Get-WindowsAutoPilotInfo -Force
         }
     }
 }
-function Step-oobeInstallModuleAzureAd {
+function Step-oobeRegisterAutopilot {
     [CmdletBinding()]
-    param ()
-    if ($env:UserName -eq 'defaultuser0') {
-        $Requirement = Import-Module AzureAD -PassThru -ErrorAction Ignore
-        if (-not $Requirement)
-        {
-            Write-Host -ForegroundColor Cyan 'Install-Module AzureAD'
-            Install-Module AzureAD -Force
-        }
+    param (
+        [System.String]
+        $Command
+    )
+    if (($env:UserName -eq 'defaultuser0') -and ($Global:oobeCloud.oobeRegisterAutopilot -eq $true) -and ($Command -ne "")) {
+        Step-oobeInstallModuleAutopilot
+        Step-oobeInstallModuleAzureAd
+        Step-oobeInstallScriptAutopilot
+
+        #Write-Host -ForegroundColor Cyan 'Registering Device in Autopilot in new PowerShell window ' -NoNewline
+        #$AutopilotProcess = Start-Process PowerShell.exe -ArgumentList "-Command $Command" -PassThru
+        #Write-Host -ForegroundColor Green "(Process Id $($AutopilotProcess.Id))"
+        #Return $AutopilotProcess
+        Write-Host -ForegroundColor Cyan 'Registering Device in Autopilot ' -NoNewline
+        Get-WindowsAutopilotInfo -Online -GroupTag "PROD" -Assign
     }
 }
+
 function Step-oobeInstallScriptAutopilot {
     [CmdletBinding()]
     param ()
