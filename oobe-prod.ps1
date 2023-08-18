@@ -305,7 +305,7 @@ Step-oobeTrustPSGallery
 Step-oobeSetDisplay
 Step-oobeSetRegionLanguage
 Step-oobeSetDateTime
-Step-oobeRegisterAutopilot
+#Step-oobeRegisterAutopilot
 Step-oobeRemoveAppxPackage
 # Step-oobeAddCapability
 Step-oobeUpdateDrivers
